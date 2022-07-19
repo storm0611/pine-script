@@ -1,0 +1,135 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © WaveUP
+
+//@version=5
+
+indicator(title="WAVE UP INDICATOR - PRO - V5", shorttitle="WAVE UP INDICATOR - PRO - V5", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// ==========  POINT 1 : SENSITIVITY  ==========
+sensitivity = input.string("Standard", title="      Sensitivity", options=["High", "Standard", "Medium", "Low"], group="SENSITIVITY SETTING")
+
+[n1, n2, length, phase] = switch sensitivity
+    "High"      => [3, 9, 3, 9]
+    "Standard"  => [5, 20, 5, 20]
+    "Medium"    => [7, 50, 7, 50]
+    "Low"       => [8, 120, 8, 120]
+    =>             [5, 20, 5, 20]
+
+power = 2
+HULLlenMT = 45
+HULLsrc = close
+
+// Calculation
+esa = ta.ema(close, n1)
+d = ta.ema(math.abs(close - esa), n1)
+ci = (close - esa) / (0.015 * d)
+wt1 = ta.ema(ci, n2)
+wt2 = ta.sma(wt1, 4)
+src = close * 3 + ta.vwap * 2 + ohlc4 / 6
+
+// Hull Minor Trend MA
+hullmaMT = ta.wma(2 * ta.wma(HULLsrc, HULLlenMT / 2) - ta.wma(HULLsrc, HULLlenMT), math.round(math.sqrt(HULLlenMT)))
+HULLmaMT_up = hullmaMT >= hullmaMT[1]
+HULLmaMT_down = hullmaMT < hullmaMT[1]
+HULLMTcol = HULLmaMT_up ? color.green : HULLmaMT_down ? #CC1111 : color.red
+HULLMTBGcol = HULLmaMT_up ? color.new(#cccccc, 70) : HULLmaMT_down ? color.new(#bababa, 70) : color.new(#aaaaaa, 70)
+
+// Definition of "Jurik Moving Average", by Everget
+jma(_src, _length, _phase, _power) =>
+    phaseRatio = _phase < -100 ? 0.5 : _phase > 100 ? 2.5 : _phase / 100 + 1.5
+    beta = 0.45 * (_length - 1) / (0.45 * (_length - 1) + 2)
+    alpha = math.pow(beta, _power)
+    jma = 0.0
+    e0 = 0.0
+    e0 := (1 - alpha) * _src + alpha * nz(e0[1])
+    e1 = 0.0
+    e1 := (_src - e0) * (1 - beta) + beta * nz(e1[1])
+    e2 = 0.0
+    e2 := (e0 + phaseRatio * e1 - nz(jma[1])) * math.pow(1 - alpha, 2) + math.pow(alpha, 2) * nz(e2[1])
+    jma := e2 + nz(jma[1])
+    jma
+
+// Calculate jma turning point
+jma_price = jma(src, length, phase, power)
+turn_down = ta.rising(jma_price[1], 1) and not ta.rising(jma_price, 1)
+turn_up = ta.falling(jma_price[1], 1) and not ta.falling(jma_price, 1)
+
+direction = int(na)
+direction := jma_price > jma_price[1] ? 1 : jma_price < jma_price[1] ? -1 : nz(direction[1])
+directionHasChanged = ta.change(direction) != 0
+directionIsUp = direction > 0
+directionIsDown = direction < 0
+
+hi = close >= open ? high : high
+lo = close <= open ? low : low
+
+currclose = float(na)
+prevclose = nz(currclose[1])
+currclose := close > close[1] ? high : close < close[1] ? low : close[1]
+
+extr = float(na)
+fixnan_1 = fixnan(extr[1])
+prevextr = directionHasChanged ? currclose : fixnan_1
+extr := directionIsUp and hi >= prevextr ? hi : directionIsDown and lo <= prevextr ? lo : prevextr
+
+vol = volume[1]
+normalize = false
+barcount = 1
+barcount := not directionHasChanged and normalize ? barcount[1] + barcount : barcount
+vol := not directionHasChanged ? vol[1] + vol : vol
+res = barcount > 1 ? vol / barcount : vol
+
+// Signal generation by intersection of two indicators
+buy_signal = ta.cross(wt1, wt2) and (wt1 > wt2) and (direction > 0)
+sell_signal = ta.cross(wt1, wt2) and (wt1 < wt2) and (direction < 0)
+
+if buy_signal
+    alert("Buy signal triggered", alert.freq_once_per_bar_close)
+if sell_signal
+    alert("Sell signal triggered", alert.freq_once_per_bar_close)
+
+barcolor(buy_signal ? color.yellow : sell_signal ? color.orange : na, title="Buy/Sell candle color")
+plotshape(buy_signal, "Buy label", text="Buy", style=shape.labelup, location=location.belowbar, color=color.yellow, size=size.auto)
+plotshape(sell_signal, "Sell label", text="Sell", style=shape.labeldown, location=location.abovebar, color=color.orange, size=size.auto)
+
+
+
+
+
+// ==========  POINT 7 : STOP LOSS BASED ON ATR  ==========
+useslflag = input.bool(true, title="  Use Stop Loss", group="STOP LOSS SETTING")
+sl_setting = input.string("Wide", title="      SL Sensitivity", options=["Narrow", "Wide"], group="STOP LOSS SETTING")
+show_recent = input.bool(true, title="  Show Recent Stop Loss", group="STOP LOSS SETTING", tooltip="If true, display only recent stop loss, otherwise, display all stop loss")
+AtrTf = timeframe.period
+lenAtr = 3
+smoothing = "RMA"
+AtrMul = sl_setting=="Wide" ? 2 : sl_setting=="Narrow" ? 1 : 1.5
+
+ma_function(source, length) =>
+	switch smoothing
+		"RMA" => ta.rma(source, length)
+		"SMA" => ta.sma(source, length)
+		"EMA" => ta.ema(source, length)
+		=> ta.wma(source, length)
+
+AtrVal = ma_function(ta.tr(true), lenAtr)
+stop_loss = buy_signal ? low - AtrMul*AtrVal : sell_signal ? high + AtrMul*AtrVal : na
+
+// Plot signal with stop loss.
+if useslflag
+    x1 = buy_signal ? bar_index : sell_signal ? bar_index : na
+    y1 = buy_signal ? stop_loss : sell_signal ? stop_loss : na
+    sl_color = buy_signal ? color.aqua : sell_signal ? color.orange : na
+    sl_line = line.new(x1, y1, x1+5, y1, color=sl_color, width=2)
+    sl_label = label.new(buy_signal or sell_signal ? bar_index:na, stop_loss, "")
+    label.set_text(sl_label, buy_signal or sell_signal ? str.tostring(stop_loss, format=format.mintick) : "")
+    label.set_yloc(sl_label, yloc.price)
+    label.set_style(sl_label, buy_signal ? label.style_label_up : sell_signal ? label.style_label_down : label.style_label_up)
+    label.set_color(sl_label, buy_signal ? color.new(color.yellow,100) : sell_signal ? color.new(color.orange,100) : color.new(color.yellow,100))
+    label.set_size(sl_label, size.normal)
+    label.set_textalign(sl_label, text.align_left)
+    label.set_textcolor(sl_label, buy_signal ? color.aqua : sell_signal ? color.orange : color.aqua)
+    label.set_tooltip(sl_label, buy_signal or sell_signal? str.tostring(stop_loss, format=format.mintick) : "")
+    if show_recent
+        line.delete(sl_line[25])
+        label.delete(sl_label[25])
