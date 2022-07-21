@@ -40,3 +40,8 @@ plot(oneBarInTwo ? f(close) : na, color = color.maroon, linewidth = 6, style = p
 plot(oneBarInTwo ? f2() : na, color = color.lime, linewidth = 6, style = plot.style_circles)
 plot(close[2], color = color.maroon)
 plot(close[1], color = color.lime)
+
+//@version=5
+indicator("Barssince", overlay = false)
+res = close > close[1] ? ta.barssince(close < close[1]) : -1
+plot(res, style = plot.style_histogram, color=res >= 0 ? color.red : color.blue)
