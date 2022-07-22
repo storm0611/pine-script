@@ -43,5 +43,14 @@ plot(close[1], color = color.lime)
 
 //@version=5
 indicator("Barssince", overlay = false)
-res = close > close[1] ? ta.barssince(close < close[1]) : -1
-plot(res, style = plot.style_histogram, color=res >= 0 ? color.red : color.blue)
+b = ta.barssince(close < close[1])
+res = close > close[1] ? b : -1
+plot(res, style = plot.style_histogram, color = res >= 0 ? color.red : color.blue)
+
+//@version=5
+indicator("My Script")
+va = 0.0
+for i = 1 to 2 by 1
+    if (i + bar_index) % 2 == 0
+        va := ta.lowest(bar_index, 10)  // same context on each call
+plot(va)
