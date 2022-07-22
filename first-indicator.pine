@@ -149,3 +149,50 @@ plot(ma2, "MA 2", color.white, 2)
 
 // Last set having no impact.
 array.set(a, 0, 10.0)
+
+//@version=5
+indicator("")
+v1 = array.new_string(10, "test")
+v2 = array.new_string(10, "test")
+array.push(v2, "test1")
+v3 = array.new_float(5, 5)
+v4 = array.new_int(5, 5)
+l1 = label.new(bar_index, close, array.join(v1))
+l2 = label.new(bar_index, close, array.join(v2, ","))
+l3 = label.new(bar_index, close, array.join(v3, ","))
+l4 = label.new(bar_index, close, array.join(v4, ","))
+
+//@version=5
+indicator("`array.sort()`")
+a = array.new_float(0)
+b = array.new_float(0)
+array.push(a, 2)
+array.push(a, 0)
+array.push(a, 1)
+array.push(b, 4)
+array.push(b, 3)
+array.push(b, 5)
+if barstate.islast
+    barUp = close > open
+    array.sort(barUp ? a : b, barUp ? order.ascending : order.descending)
+    label.new(bar_index, 0,
+      "a " + (barUp ? "is sorted ▲: "   : "is not sorted: ") + str.tostring(a) + "\n\n" +
+      "b " + (barUp ? "is not sorted: " : "is sorted ▼: ")   + str.tostring(b), size = size.large)
+
+//@version=5
+indicator("All `alert()` calls")
+r = ta.rsi(close, 20)
+
+// Detect crosses.
+xUp = ta.crossover( r, 50)
+xDn = ta.crossunder(r, 50)
+// Trigger an alert on crosses.
+if xUp
+    alert("Go long (RSI is " + str.tostring(r, "#.00)"))
+else if xDn
+    alert("Go short (RSI is " + str.tostring(r, "#.00)"))
+
+plotchar(xUp, "Go Long",  "▲", location.bottom, color.lime, size = size.tiny)
+plotchar(xDn, "Go Short", "▼", location.top,    color.red,  size = size.tiny)
+hline(50)
+plot(r)
