@@ -111,3 +111,24 @@ bool xUp = ta.crossover(close, ma)
 color maColor = close > ma ? color.lime : color.fuchsia
 plot(ma, "MA", maColor)
 plotchar(xUp, "Cross Up", "▲", location.top, size = size.tiny)
+
+//@version=5
+indicator("Shading the chart's background", "", true)
+BASE_COLOR = color.navy
+bgColor = dayofweek == dayofweek.monday    ? color.new(BASE_COLOR, 50) :
+          dayofweek == dayofweek.tuesday   ? color.new(BASE_COLOR, 60) :
+          dayofweek == dayofweek.wednesday ? color.new(BASE_COLOR, 70) :
+          dayofweek == dayofweek.thursday  ? color.new(BASE_COLOR, 80) :
+          dayofweek == dayofweek.friday    ? color.new(BASE_COLOR, 90) :
+          color.new(color.blue, 80)
+bgcolor(bgColor)
+
+//@version=5
+indicator("", "", true)
+plotID1 = plot(high)
+plotID2 = plot(math.max(close, open))
+fill(plotID1, plotID2, color.yellow)
+
+//@version=5
+indicator("")
+plotshape(close)
