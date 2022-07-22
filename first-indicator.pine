@@ -68,3 +68,46 @@ else
     color.red       // Local block (local scope)
 
 bgcolor(color.new(plotColor, 70))   // Call to a built-in function  (global scope)
+
+//@version=5
+indicator("", "", true)
+sensitivityInput = input.int(2, "Sensitivity", minval = 1, tooltip = "Higher values make color changes less sensitive.")
+ma = ta.sma(close, 20)
+maUp = ta.rising(ma, sensitivityInput)
+maDn = ta.falling(ma, sensitivityInput)
+
+// On first bar only, initialize color to gray
+var maColor = color.gray
+if maUp
+    // MA has risen for two bars in a row; make it lime.
+    maColor := color.lime
+else if maDn
+    // MA has fallen for two bars in a row; make it fuchsia.
+    maColor := color.fuchsia
+
+plot(ma, "MA", maColor, 2)
+
+//@version=5
+indicator("", "", true)
+string barState = if barstate.islastconfirmedhistory
+    "islastconfirmedhistory"
+else if barstate.isnew
+    "isnew"
+else if barstate.isrealtime
+    "isrealtime"
+else
+    "other"
+
+f_print(_text) =>
+    var table _t = table.new(position.middle_right, 1, 1)
+    table.cell(_t, 0, 0, _text, bgcolor = color.yellow)
+f_print(barState)
+
+//@version=5
+indicator("", "", true)
+int periodInput = input.int(100, "Period", minval = 2)
+float ma = ta.sma(close, periodInput)
+bool xUp = ta.crossover(close, ma)
+color maColor = close > ma ? color.lime : color.fuchsia
+plot(ma, "MA", maColor)
+plotchar(xUp, "Cross Up", "▲", location.top, size = size.tiny)
