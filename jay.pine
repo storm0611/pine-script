@@ -1,0 +1,26 @@
+//@version=5
+
+// # ========================================================================= #
+// #                   |  jay Indicator  |
+// # ========================================================================= #
+indicator(
+ title                = "Simple Indicator",
+ shorttitle           = "for jay",
+ overlay              =  true
+ )
+// # ========================================================================= #
+// #                   |  jay Indicator  |
+// # ========================================================================= #
+
+ema20 = ta.ema(source = close, length = 20) 
+ema50 = ta.ema(source = close, length = 50) 
+ema100 = ta.ema(source = close, length = 100) 
+ema200 = ta.ema(source = close, length = 200) 
+plot(series = ema20, title = "EMA20", color = color.new(color = color.green , transp = 0), linewidth = 1, style = line.style_solid)
+plot(series = ema50, title = "EMA50", color = color.new(color = color.yellow , transp = 0), linewidth = 2, style = line.style_solid)
+plot(series = ema100, title = "EMA100", color = color.new(color = color.red , transp = 0), linewidth = 3, style = line.style_solid)
+plot(series = ema200, title = "EMA200", color = color.new(color = color.white , transp = 0), linewidth = 4, style = line.style_solid)
+plot(series = volume, title = "")
+
+strategy.entry(id = "", direction =  , qty = , limit = , stop = , oca_name = "", oca_type =  , comment = "", when = , alert_message = "")
+
